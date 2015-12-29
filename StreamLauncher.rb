@@ -252,9 +252,9 @@ Shoes.app title: "StreamLauncher, GUI for livestreamer",
     stack width: 500 do
       border black, strokewidth: 2, width: 475
       flow margin: 5 do
-        button "Ajouter", width: 155
-        button "Modifier", width: 155
-        button "Supprimer", width: 155
+        @b_ajouter = button "Ajouter", width: 155
+        @b_modifier = button "Modifier", width: 155
+        @b_supprimer = button "Supprimer", width: 155
       end
       flow margin: 2 do
         para "Nom :"
@@ -269,9 +269,9 @@ Shoes.app title: "StreamLauncher, GUI for livestreamer",
         @nouv_url_chat = edit_line width: 340, right: 30
       end
     end
-    stack width: 300, margin: 50 do
-      @video = edit_line text: "http://www.", width: 200
-      @b3 = button "Lancer ce stream"
+    stack width: 400, margin: 30 do
+      @video = edit_line text: "http://www.", width: 340
+      @b4 = button "Lancer ce stream", margin_left: 90
     end
   end
 
@@ -289,6 +289,58 @@ Shoes.app title: "StreamLauncher, GUI for livestreamer",
 /////////////////////////////////////////////////////////////////////////////////////////////
 =end
 
+  # ajout d'un stream à la liste
+  @b_ajouter.click do
+    @message_erreur.replace("")
+    @bord.hide
 
+    # on enleve les espaces inutiles en début et fin de chaine
+    @nouv_nom.text = @nouv_nom.text.strip
+    @nouv_url_stream.text = @nouv_url_stream.text.strip
+    @nouv_url_chat.text = @nouv_url_chat.text.strip
+
+    # on a besoin ces valeurs car elles vont changer en changeant @liste_streams_enregistres
+    nom = @nouv_nom.text
+    url_stream = @nouv_url_stream.text
+    url_chat = @nouv_url_chat.text
+
+    # si le stream n'a pas de nom, on renvoie un message d'erreur
+    if nom.empty?
+      @message_erreur.replace("Veuillez indiquer un nom pour le stream")
+      @bord.show
+    # si le stream n'a ni adresse pour le stream ni pour le chat, on renvoie une erreur
+    elsif url_stream.empty? && url_chat.empty?
+      @message_erreur.replace(["Veuillez indiquer une adresse ",
+                                "pour le stream ou pour le chat"])
+      @bord.show
+    # sinon on peut tenter de l'ajouter à la liste
+    else
+      existe_deja = false
+
+      # on vérifie qu'aucun stream ne possède déjà le même nom, sinon on renvoie une erreur
+      liste_streams.each do |elem|
+        if nom == elem.nom
+          @message_erreur.replace("Ce nom de stream est déjà pris")
+          @bord.show
+          existe_deja = true
+          break
+        end
+      end
+
+      if existe_deja == false
+        # on ajoute le nom à @liste_streams_enregistres
+        # note: cette affectation provoque un appel à sa méthode change() mais c'est
+        #       nécessaire pour actualiser la liste déroulante
+        @liste_streams_enregistres.items = @liste_streams_enregistres.items << nom
+        # on crée un nouveau stream dans la liste
+        stream_tmp = Stream.new(nom, url_stream, url_chat)
+        liste_streams << stream_tmp
+        # on place la liste déroulante sur ce nouvel élément
+        @liste_streams_enregistres.choose(nom)
+
+        # TODO: serialization de la liste de streams à ajouter ici
+      end
+    end
+  end
 
 end
