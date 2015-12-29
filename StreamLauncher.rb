@@ -8,16 +8,20 @@ class Stream
 end
 
 Shoes.app title: "StreamLauncher, GUI for livestreamer",
-          width: 910,
-          height: 700,
+          width: 920,
+          height: 400,
           resizable: false do
 
-  stream1 = Stream.new("Zerator", "www.twitch.tv/zerator", "http://www.twitch.tv/zerator/chat?popout=")
-  stream2 = Stream.new("Corobizar", "dailymotion.com/video/x162xu2", "http://corobizar.com/stand-alone-chat.php")
+  background slategray
+
+
+  stream1 = Stream.new("Zerator", "", "http://www.twitch.tv/zerator/chat?popout=")
+  stream2 = Stream.new("Corobizar", "www.twitch.tv/baramout", "http://corobizar.com/stand-alone-chat.php")
   stream3 = Stream.new("machin daiy", "http://games.dailymotion.com/live/x3ixah7", "http://corobizar.com/stand-alone-chat.php")
-  stream4 = Stream.new("Mira truc", "http://www.twitch.tv/miramisu", "http://www.twitch.tv/zerator/chat?popout=")
+  stream4 = Stream.new("Mira truc", "http://www.twitch.tv/MilleniumTVLoL", "http://www.twitch.tv/zerator/chat?popout=")
   liste_streams = [stream1, stream2, stream3, stream4]
 
+  nom_stream = ""
   qualite_select = ""
   adresse_stream = ""
   adresse_chat = ""
@@ -51,27 +55,11 @@ Shoes.app title: "StreamLauncher, GUI for livestreamer",
 =end
 
   # bande supérieure
-  flow margin: 5 do
+  flow margin: 10 do
     # colonne de gauche
     stack width: 300 do
       para "Liste des streams enregistrés :"
-      @liste = list_box items: liste_noms, width: 275 do |element|
-        # à chaque sélection d'un nom de stream, on le retient dans une variable et
-        @stream_select = element.text
-        # on nettoie la colonne de droite
-        @qualite_error.hide
-        # et on efface la qualité pour ne pas perdre en cohérence
-        qualite_select = ""
-
-        # stockage des informations correspondant au nom du stream sélectionné
-        liste_streams.each do |elem|
-          if @stream_select == elem.nom
-            adresse_stream = elem.url_stream
-            adresse_chat = elem.url_chat
-            break
-          end
-        end
-      end
+      @liste_streams_enregistres = list_box items: liste_noms, width: 275
     end
 
     # colonne centrale
@@ -92,56 +80,91 @@ Shoes.app title: "StreamLauncher, GUI for livestreamer",
 =begin
 /////////////////////////////////////////////////////////////////////////////////////////////
 
-  ########      ######         ######## ##     ## ######## ##    ## ########  ######
-     ##        ##    ##        ##       ##     ## ##       ###   ##    ##    ##    ##
-     ##        ##              ##       ##     ## ##       ####  ##    ##    ##
-     ##         ######         ######   ##     ## ######   ## ## ##    ##     ######
-     ##              ##        ##        ##   ##  ##       ##  ####    ##          ##
-     ##    ### ##    ## ###    ##         ## ##   ##       ##   ###    ##    ##    ##
-     ##    ###  ######  ###    ########    ###    ######## ##    ##    ##     ######
+    ########      ######         ######## ##     ## ######## ##    ## ########  ######
+       ##        ##    ##        ##       ##     ## ##       ###   ##    ##    ##    ##
+       ##        ##              ##       ##     ## ##       ####  ##    ##    ##
+       ##         ######         ######   ##     ## ######   ## ## ##    ##     ######
+       ##              ##        ##        ##   ##  ##       ##  ####    ##          ##
+       ##    ### ##    ## ###    ##         ## ##   ##       ##   ###    ##    ##    ##
+       ##    ###  ######  ###    ########    ###    ######## ##    ##    ##     ######
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 =end
 
-  # NOTE: si aucun stream n'est sélectionné et qu'on clique sur b1, on obtient une list_box
+  # à chaque sélection d'un nom de stream
+  @liste_streams_enregistres.change do |element|
+    # on le retient dans une variable et
+    nom_stream = element.text
+    # on nettoie la colonne de droite
+    @qualite_error.hide
+    # et on efface la qualité pour ne pas perdre en cohérence
+    qualite_select = ""
+
+    # stockage des informations correspondant au nom du stream sélectionné
+    liste_streams.each do |elem|
+      if nom_stream == elem.nom
+        adresse_stream = elem.url_stream
+        adresse_chat = elem.url_chat
+        break
+      end
+    end
+
+    # mise à jour des champs de la boite d'ajout/modification de stream
+    @nouv_nom.text = nom_stream
+    @nouv_url_stream.text = adresse_stream
+    @nouv_url_chat.text = adresse_chat
+  end
 
   # recherche des qualités disponibles pour le stream sélectionné
   @b1.click do
     @message_erreur.replace("")
     @bord.hide
-    # on exécute la commande avec `...` pour rediriger l'affichage dans une variable
-    @commande = `livestreamer "#{adresse_stream}"`
+    @liste_qualites.remove
 
-    # après cette commande, soit on a un message contenant "error"..
-    if @commande.include?("error:")
-      # dans ce cas on renvoie un message d'erreur
-      @message_erreur.replace(["Impossible de vérifier la qualité, ",
-                                "le stream est hors-ligne ou l'adresse est erronée..."])
-      # on affiche la bordure du bandeau d'erreur
+    # si aucun stream n'est sélectionné, on renvoie un message d'erreur
+    if nom_stream.empty?
+      @message_erreur.replace("Aucun stream sélectionné")
       @bord.show
-      @liste_qualites.remove
-    # soit on a un message contenant les qualités
+    # sinon s'il n'y a pas d'adresse pour le stream sélectionné, on renvoie une erreur
+    elsif adresse_stream.empty?
+      @message_erreur.replace("Aucune adresse enregistré pour #{nom_stream}")
+      @bord.show
+    # sinon on peut tenter de lancer livestreamer
     else
-      # on révèle la colonne de droite
-      @qualite_error.show
-      # r1 est l'expression regulière pour nettoyer en partie la liste des qualités
-      r1 = Regexp.new('(\s\(\w+\)(\, )?)|(\, )')
-      # on soustrait la première (et unique) occurrence de "...\nAvailable streams: "
-      # ainsi que toutes les occurrences correspondantes à r1 par une espace
-      @commande.sub!(/.+\sAvailable streams: /, '').gsub!(r1, ' ')
-      # enfin il ne reste que des qualités séparés par une espace, on les split en un array
-      @resultat = @commande.split(' ')
+      # on exécute la commande avec `...` pour rediriger l'affichage dans une variable
+      @commande = `livestreamer "#{adresse_stream}"`
 
-      # on affiche la liste déroulante des qualités disponibles
-      @message_qualite.replace("Qualités disponibles pour\n#{@stream_select} :")
-      # on supprime la précédente liste de qualités
-      @liste_qualites.remove
+      # après cette commande, soit on a un message contenant "error"..
+      if @commande.include?("error:")
+        # dans ce cas on renvoie un message d'erreur
+        @message_erreur.replace(["Impossible de vérifier la qualité, ",
+                                  "le stream est hors-ligne ou l'adresse est erronée..."])
+        # on affiche la bordure du bandeau d'erreur
+        @bord.show
+        @liste_qualites.remove
+      # soit on a un message contenant les qualités
+      else
+        # on révèle la colonne de droite
+        @qualite_error.show
+        # r1 est l'expression regulière pour nettoyer en partie la liste des qualités
+        r1 = Regexp.new('(\s\(\w+\)(\, )?)|(\, )')
+        # on soustrait la première (et unique) occurrence de "...\nAvailable streams: "
+        # ainsi que toutes les occurrences correspondantes à r1 par une espace
+        @commande.sub!(/.+\sAvailable streams: /, '').gsub!(r1, ' ')
+        # enfin il ne reste que des qualités séparés par une espace, on les split en un array
+        @resultat = @commande.split(' ')
 
-      # la liste des qualités va contenir notre résultat traité
-      @qualite_error.append do
-        @liste_qualites = list_box items: @resultat, width: 150 do |element|
-        # à chaque sélection d'un élément, on le retient dans une variable
-          qualite_select = element.text
+        # on affiche la liste déroulante des qualités disponibles
+        @message_qualite.replace("Qualités disponibles pour\n#{nom_stream} :")
+        # on supprime la précédente liste de qualités
+        @liste_qualites.remove
+
+        # la liste des qualités va contenir notre résultat traité
+        @qualite_error.append do
+          @liste_qualites = list_box items: @resultat, width: 150 do |element|
+          # à chaque sélection d'un élément, on le retient dans une variable
+            qualite_select = element.text
+          end
         end
       end
     end
@@ -158,8 +181,12 @@ Shoes.app title: "StreamLauncher, GUI for livestreamer",
     end
 
     # si aucun stream n'est sélectionné, on envoie un message d'erreur
-    if adresse_stream.empty?
+    if nom_stream.empty?
       @message_erreur.replace("Aucun stream sélectionné")
+      @bord.show
+    # sinon s'il n'y a pas d'adresse pour le stream sélectionné, on renvoie une erreur
+    elsif adresse_stream.empty?
+      @message_erreur.replace("Aucune adresse enregistré pour #{nom_stream}")
       @bord.show
     # sinon on peut lancer le stream
     else
@@ -173,12 +200,12 @@ Shoes.app title: "StreamLauncher, GUI for livestreamer",
     @bord.hide
 
     # si aucun stream n'est sélectionné, on envoie un message d'erreur
-    if adresse_stream.empty?
+    if nom_stream.empty?
       @message_erreur.replace("Aucun stream sélectionné")
       @bord.show
     # sinon si le stream ne possède pas d'adresse de chat, on envoie un message d'erreur
     elsif adresse_chat.empty?
-      @message_erreur.replace("Aucun chat enregistré pour #{@stream_select}")
+      @message_erreur.replace("Aucun chat enregistré pour #{nom_stream}")
       @bord.show
     # sinon on peut lancer le chat dans le navigateur
     else
@@ -201,9 +228,9 @@ Shoes.app title: "StreamLauncher, GUI for livestreamer",
 =end
 
   # bandeau pour les messages d'erreur
-  flow margin: 5 do
+  flow margin_bottom: 20, margin_top: 20, height: 101 do
     @bord = border red, strokewidth: 2, hidden: true
-    @message_erreur = para "", align: "center"
+    @message_erreur = para "", align: "center", margin_bottom: 20, margin_top: 20
   end
 
 =begin
@@ -221,8 +248,47 @@ Shoes.app title: "StreamLauncher, GUI for livestreamer",
 =end
 
   # bande inférieure
-  flow margin: 5 do
-    
+  flow margin: 10 do
+    stack width: 500 do
+      border black, strokewidth: 2, width: 475
+      flow margin: 5 do
+        button "Ajouter", width: 155
+        button "Modifier", width: 155
+        button "Supprimer", width: 155
+      end
+      flow margin: 2 do
+        para "Nom :"
+        @nouv_nom = edit_line width: 340, right: 30
+      end
+      flow margin: 2 do
+        para "URL du stream :"
+        @nouv_url_stream = edit_line width: 340, right: 30
+      end
+      flow margin: 2 do
+        para "URL du chat :"
+        @nouv_url_chat = edit_line width: 340, right: 30
+      end
+    end
+    stack width: 300, margin: 50 do
+      @video = edit_line text: "http://www.", width: 200
+      @b3 = button "Lancer ce stream"
+    end
   end
+
+=begin
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+    ########       ######         ######## ##     ## ######## ##    ## ########  ######
+    ##     ##     ##    ##        ##       ##     ## ##       ###   ##    ##    ##    ##
+    ##     ##     ##              ##       ##     ## ##       ####  ##    ##    ##
+    ########       ######         ######   ##     ## ######   ## ## ##    ##     ######
+    ##     ##           ##        ##        ##   ##  ##       ##  ####    ##          ##
+    ##     ## ### ##    ## ###    ##         ## ##   ##       ##   ###    ##    ##    ##
+    ########  ###  ######  ###    ########    ###    ######## ##    ##    ##     ######
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+=end
+
+
 
 end
