@@ -4,7 +4,7 @@ class Stream
     @url_stream = url_stream
     @url_chat = url_chat
   end
-  attr_reader :nom, :url_stream, :url_chat
+  attr_accessor :nom, :url_stream, :url_chat
 end
 
 Shoes.app title: "StreamLauncher, GUI for livestreamer",
@@ -37,8 +37,10 @@ Shoes.app title: "StreamLauncher, GUI for livestreamer",
   liste_noms = liste_streams.collect do |element|
     element.nom
   end
-  # tri de la liste
-  liste_noms.sort!
+  # tri de la liste sans tenir compte de la casse
+  liste_noms.sort! do |a,b|
+    a.casecmp(b)
+  end
 
 =begin
 /////////////////////////////////////////////////////////////////////////////////////////////
@@ -299,6 +301,11 @@ Shoes.app title: "StreamLauncher, GUI for livestreamer",
     @nouv_url_stream.text = @nouv_url_stream.text.strip
     @nouv_url_chat.text = @nouv_url_chat.text.strip
 
+    # le nom doit faire 20 caractères au maximum pour éviter qu'il ne dépasse trop à droite
+    if @nouv_nom.text.size > 20
+      @nouv_nom.text = @nouv_nom.text[0..19]
+    end
+
     # on a besoin ces valeurs car elles vont changer en changeant @liste_streams_enregistres
     nom = @nouv_nom.text
     url_stream = @nouv_url_stream.text
@@ -328,15 +335,90 @@ Shoes.app title: "StreamLauncher, GUI for livestreamer",
       end
 
       if existe_deja == false
-        # on ajoute le nom à @liste_streams_enregistres
-        # note: cette affectation provoque un appel à sa méthode change() mais c'est
-        #       nécessaire pour actualiser la liste déroulante
-        @liste_streams_enregistres.items = @liste_streams_enregistres.items << nom
         # on crée un nouveau stream dans la liste
         stream_tmp = Stream.new(nom, url_stream, url_chat)
         liste_streams << stream_tmp
+
+        # on récupère la liste des noms de streams
+        liste_noms = liste_streams.collect do |element|
+          element.nom
+        end
+        # tri de la liste sans tenir compte de la casse
+        liste_noms.sort! do |a,b|
+          a.casecmp(b)
+        end
+
+        # on remplace les précédents items de @liste_streams_enregistres par liste_noms
+        # note: cette affectation provoque un appel à sa méthode change() mais c'est
+        #       nécessaire pour actualiser la liste déroulante
+        @liste_streams_enregistres.items = liste_noms
+
         # on place la liste déroulante sur ce nouvel élément
         @liste_streams_enregistres.choose(nom)
+
+        # TODO: serialization de la liste de streams à ajouter ici
+      end
+    end
+  end
+
+  # modification d'un stream de la liste
+  @b_modifier.click do
+    @message_erreur.replace("")
+    @bord.hide
+
+    # si aucun stream n'est sélectionné, on renvoie un message d'erreur
+    if nom_stream.empty?
+      @message_erreur.replace("Aucun stream sélectionné pour modification")
+      @bord.show
+    else
+      # on enleve les espaces inutiles en début et fin de chaine
+      @nouv_nom.text = @nouv_nom.text.strip
+      @nouv_url_stream.text = @nouv_url_stream.text.strip
+      @nouv_url_chat.text = @nouv_url_chat.text.strip
+
+      # le nom doit faire 20 caractères au maximum pour éviter qu'il ne dépasse trop à droite
+      if @nouv_nom.text.size > 20
+        @nouv_nom.text = @nouv_nom.text[0..19]
+      end
+
+      # on a besoin ces valeurs car elles vont changer en changeant @liste_streams_enregistres
+      nom = @nouv_nom.text
+      url_stream = @nouv_url_stream.text
+      url_chat = @nouv_url_chat.text
+
+      # si le stream n'a pas de nom, on renvoie un message d'erreur
+      if nom.empty?
+        @message_erreur.replace("Veuillez indiquer un nom pour le stream")
+        @bord.show
+      # si le stream n'a ni adresse pour le stream ni pour le chat, on renvoie une erreur
+      elsif url_stream.empty? && url_chat.empty?
+        @message_erreur.replace(["Veuillez indiquer une adresse ",
+                                  "pour le stream ou pour le chat"])
+        @bord.show
+      # sinon on peut modifier la liste
+      else
+        # on cherche le stream ayant le même nom que celui sélectionné pour le modifier
+        liste_streams.each do |elem|
+          if nom_stream == elem.nom
+              elem.nom = nom
+              elem.url_stream = url_stream
+              elem.url_chat = url_chat
+            break
+          end
+        end
+
+        # on récupère la liste des noms de streams
+        liste_noms = liste_streams.collect do |element|
+          element.nom
+        end
+        # tri de la liste sans tenir compte de la casse
+        liste_noms.sort! do |a,b|
+          a.casecmp(b)
+        end
+        # on remplace les précédents items de @liste_streams_enregistres par liste_noms
+        # note: cette affectation provoque un appel à sa méthode change() mais c'est
+        #       nécessaire pour actualiser la liste déroulante
+        @liste_streams_enregistres.items = liste_noms
 
         # TODO: serialization de la liste de streams à ajouter ici
       end
