@@ -474,4 +474,19 @@ Shoes.app title: "StreamLauncher, GUI for livestreamer",
       nom_stream = ""
     end
   end
+
+  # lance le stream indiqué avec la qualite "best"
+  @b4.click do
+    @message_erreur.replace("")
+    @bord.hide
+
+    # si aucun stream n'est indiqué, on envoie un message d'erreur
+    if @video.text.empty?
+      @message_erreur.replace("Aucun stream sélectionné")
+      @bord.show
+    # sinon on peut lancer le stream, on ne fait aucune vérification sur la validité du lien
+    else
+      system("cmd.exe /c start livestreamer #{@video.text} best")
+    end
+  end
 end
