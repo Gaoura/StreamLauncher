@@ -415,14 +415,63 @@ Shoes.app title: "StreamLauncher, GUI for livestreamer",
         liste_noms.sort! do |a,b|
           a.casecmp(b)
         end
+
         # on remplace les précédents items de @liste_streams_enregistres par liste_noms
         # note: cette affectation provoque un appel à sa méthode change() mais c'est
         #       nécessaire pour actualiser la liste déroulante
         @liste_streams_enregistres.items = liste_noms
+
+        # si le nom change du stream sélectionné, on replace la liste déroulante dessus
+        if nom_stream != nom
+          @liste_streams_enregistres.choose(nom)
+        end
 
         # TODO: serialization de la liste de streams à ajouter ici
       end
     end
   end
 
+  # suppression d'un stream de la liste
+  @b_supprimer.click do
+    @message_erreur.replace("")
+    @bord.hide
+
+    # si aucun stream n'est sélectionné, on renvoie un message d'erreur
+    if nom_stream.empty?
+      @message_erreur.replace("Aucun stream sélectionné pour suppression")
+      @bord.show
+    else
+      # on cherche le stream ayant le même nom que celui sélectionné pour le suppresion
+      liste_streams.each do |elem|
+        if nom_stream == elem.nom
+            liste_streams.delete(elem)
+          break
+        end
+      end
+
+      # on récupère la liste des noms de streams
+      liste_noms = liste_streams.collect do |element|
+        element.nom
+      end
+      # tri de la liste sans tenir compte de la casse
+      liste_noms.sort! do |a,b|
+        a.casecmp(b)
+      end
+
+      # plus aucun stream n'est sélectionné, plutôt que de mettre le premier de la liste
+      # pour éviter un double-clique maladroit sur le bouton Supprimer
+      adresse_stream = ""
+      adresse_chat = ""
+
+      # on remplace les précédents items de @liste_streams_enregistres par liste_noms
+      # note: cette affectation provoque un appel à sa méthode change() mais c'est
+      #       nécessaire pour actualiser la liste déroulante
+      @liste_streams_enregistres.items = liste_noms
+
+      # je ne sais pas pourquoi, si on remet nom_stream à vide AVANT de modifier les items
+      # on ne passe plus ni dans "if nom_stream.empty?" ni dans "else"
+      # si on enchaine les suppressions
+      nom_stream = ""
+    end
+  end
 end
