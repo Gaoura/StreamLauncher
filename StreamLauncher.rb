@@ -14,12 +14,7 @@ Shoes.app title: "StreamLauncher, GUI for livestreamer",
 
   background slategray
 
-
-  stream1 = Stream.new("Zerator", "", "http://www.twitch.tv/zerator/chat?popout=")
-  stream2 = Stream.new("Corobizar", "www.twitch.tv/baramout", "http://corobizar.com/stand-alone-chat.php")
-  stream3 = Stream.new("machin daiy", "http://games.dailymotion.com/live/x3ixah7", "http://corobizar.com/stand-alone-chat.php")
-  stream4 = Stream.new("Mira truc", "http://www.twitch.tv/MilleniumTVLoL", "http://www.twitch.tv/zerator/chat?popout=")
-  liste_streams = [stream1, stream2, stream3, stream4]
+  liste_streams = []
 
   nom_stream = ""
   qualite_select = ""
@@ -356,7 +351,9 @@ Shoes.app title: "StreamLauncher, GUI for livestreamer",
         # on place la liste déroulante sur ce nouvel élément
         @liste_streams_enregistres.choose(nom)
 
-        # TODO: serialization de la liste de streams à ajouter ici
+        File.open("streams.slgl", 'w+') do |f|
+          Marshal.dump(liste_streams, f)
+        end
       end
     end
   end
@@ -426,7 +423,9 @@ Shoes.app title: "StreamLauncher, GUI for livestreamer",
           @liste_streams_enregistres.choose(nom)
         end
 
-        # TODO: serialization de la liste de streams à ajouter ici
+        File.open("streams.slgl", 'w+') do |f|
+          Marshal.dump(liste_streams, f)
+        end
       end
     end
   end
@@ -472,6 +471,10 @@ Shoes.app title: "StreamLauncher, GUI for livestreamer",
       # on ne passe plus ni dans "if nom_stream.empty?" ni dans "else"
       # si on enchaine les suppressions
       nom_stream = ""
+
+      File.open("streams.slgl", 'w+') do |f|
+        Marshal.dump(liste_streams, f)
+      end
     end
   end
 
